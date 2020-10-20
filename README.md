@@ -6,43 +6,29 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/lukaskln/The-Effect-of-Sparse-Coding-visualized-in-Application">
-    <img src="https://github.com/lukaskln/The-Effect-of-Sparse-Coding-visualized-in-Application/blob/master/Graphics/Compression-1.jpg" alt="Logo" width="800">
+  <a href="https://github.com/lukaskln/Making-predictions-based-on-highly-corrupted-MRI-data">
+    <img src="https://github.com/lukaskln/Making-predictions-based-on-highly-corrupted-MRI-data/blob/main/Graphics/OutliersPC.png" alt="Logo" width="800">
   </a>
 
   <h3 align="center">The Effect of Sparse Coding visualized in Application</h3>
 
   <p align="center">
-    Area of Multivariate Analysis.
+    Area of Anomaly Detection and Machine Learning.
     <br />
-    <a href="https://github.com/lukaskln/The-Effect-of-Sparse-Coding-visualized-in-Application"><strong>Explore the Project »</strong></a>
+    <a href="https://github.com/lukaskln/Making-predictions-based-on-highly-corrupted-MRI-data"><strong>Explore the Project »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/lukaskln/The-Effect-of-Sparse-Coding-visualized-in-Application/issues">Report Bug</a>
+    <a href="https://github.com/lukaskln/Making-predictions-based-on-highly-corrupted-MRI-data/issues">Report Bug</a>
   </p>
 </p>
 
 ## About the Project
 
-Sparse coding is applied in this project on picture compression and reconstruction for black
-& white and coloured pictures. The programming language R with the NNLM
-package offering non-negative matrix factorization (NNMF) with ℓ1 regularization on
-the score matrix is used. We use NNMF since classical dictionary learning
-is not implemented as a package in R. If the reader wants to try out dictionary
-learning and online dictionary learning, Mairal et al. implemented their solutions in
-C++ with different interfaces [[Mairal, 2020](http://spams-devel.gforge.inria.fr/index.html)].
-
-Like dictionary learning NNMF wants to minimize the sum of squared distances
-between the original data and the reconstruction. Again, we induce sparsity of the
-coefficient or score matrix by an ℓ1 regularization term. The main difference is that
-NNMF assumes fully non-negative data X and has the constrain that every element in
-the dictionary and coefficient matrix has to be grater or equal to zero. Since over completion
-of the dictionary and different levels of sparsity are possible in this model too,
-our findings apply in general for dictionary learning as well.
+Predicting the age of patients based on low quality magnetic resonance imaging (MRI) data. Main focus was on outlier removal via dimension reduction with Support Vector Classifiers (SVC) with radial kernel plus a small gamma value and feature selection by regression- and LASSO-based methods. For the pre-processing, the column median was inserted for missing values, zero variance features dropped, and a quantile transformer used for scaling and standardizing. For estimation and pre-processing evaluation three types of models were used: Support Vector Regression (SVR), boosted regression trees and a Deep Neural Network (DNN). All estimation, outlier detection and feature selection models were evaluated via 5-fold cross validation and hyperparameter optimization by grid search.
 
 ## The Code 
 
-The code is fully in R and in one script. The "Pictures" folder includes the original pictures used for the demonstrations. In the "Graphics" folder examples of compression and denoising with different parameters can be found. For data rights reasons is the respective training dataset not included in this repository.
+The code is structured into three scripts. First the explorative analysis where empirical proof for feature selection, transformation and dropped outlier is given. Second two scripts with the full pipelines for the boosted regression tree plus DNN and the SVR. The pre-processing in both pipelines differs.
 
 ## Contact
 
@@ -51,6 +37,6 @@ Lukas Klein - [LinkedIn](https://www.linkedin.com/in/lukasklein1/) - lukas.klein
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=flat-square
-[license-url]: https://github.com/lukaskln/The-Effect-of-Sparse-Coding-visualized-in-Application/blob/master/LICENSE.txt
+[license-url]: https://github.com/lukaskln/Making-predictions-based-on-highly-corrupted-MRI-data/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/lukasklein1/
