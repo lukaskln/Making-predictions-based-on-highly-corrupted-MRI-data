@@ -1,0 +1,237 @@
+#### SetUp ####
+
+import numpy as np
+import pandas as pd
+import lightgbm as lgb
+from sklearn.metrics import r2_score
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.model_selection import cross_validate, GridSearchCV, KFold
+from sklearn.linear_model import Lasso
+from sklearn.feature_selection import SelectFromModel, RFE
+from sklearn.svm import SVR, OneClassSVM
+from sklearn.decomposition import PCA
+import xgboost as xgb
+
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense, Dropout
+from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
+from keras import backend as K
+from keras import regularizers
+
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.figure_factory as ff
+import matplotlib.pyplot as plt
+
+from collections import Counter
+from scipy import stats
+from itertools import repeat
+
+def modelfit(alg, X , y, useTrainCV=True, cv_folds=5, early_stopping_rounds=50):
+
+    if useTrainCV:
+        xgb_param = alg.get_xgb_params()
+        xgtrain = xgb.DMatrix(X, label=y)
+        cvresult = xgb.cv(xgb_param, xgtrain, num_boost_round=alg.get_params()['n_estimators'], nfold=cv_folds,
+                          metrics='rmse', early_stopping_rounds=early_stopping_rounds)
+
+    alg.fit(X, y, eval_metric='rmse')
+
+    dtrain_predictions = alg.predict(X)
+
+    print("\nModel Report:")
+    print("\nTrain R^2 : %.4g" % r2_score(y, dtrain_predictions))
+    print("\nLast Iteration:")
+    print(cvresult.iloc[-1,:])
+    print("\nBest Iteration:")
+    print(cvresult[cvresult["test-rmse-mean"] ==
+                   np.min(cvresult["test-rmse-mean"])])
+
+    param_range = np.linspace(1, [x for x in cvresult["test-rmse-mean"].shape][0], [x for x in cvresult["test-rmse-mean"].shape][0])
+
+    plt.figure(figsize=(8, 5))
+    plt.tick_params(axis='x', which='both', bottom='off', top='off')
+    plt.tick_params(axis='y', which='both', left='off', right='off')
+
+    colors = ["#049DD9", "#03A64A", "#F2AC29", "#F2CA80", "#F22929"]
+
+    plt.plot(param_range, cvresult["test-rmse-mean"],
+            'o-', markerfacecolor='w',
+            color=colors[0], markeredgewidth=2, linewidth=2,
+            markeredgecolor=colors[0], markersize=8, label='CV score')
+    plt.axvline(cvresult[cvresult["test-rmse-mean"] == np.min(cvresult["test-rmse-mean"])].index[0], label='Minimum', color=colors[2],
+                linewidth=2, linestyle='--')
+    plt.ylabel('RMSE')
+    plt.xlabel('Interation')
+    plt.legend(loc='upper right')
+    plt.tight_layout()
+    plt.show()
+
+#### Preprocessing ####
+
+# Train Data
+
+X_train = pd.read_csv("X_train.csv")
+
+y_train = pd.read_csv("y_train.csv")
+
+X_train.fillna(X_train.median(), inplace=True)
+
+X_train = X_train.iloc[:, 1:833]
+
+scaler = StandardScaler() 
+
+X_train = pd.DataFrame(
+    scaler.fit_transform(
+        X_train),
+    columns=X_train.columns)
+
+# Test Data
+
+X_test = pd.read_csv("X_test.csv")
+
+X_test.fillna(X_test.median(), inplace=True)
+
+X_test = X_test.iloc[:, 1:833]
+
+X_test = pd.DataFrame(
+    scaler.fit_transform(
+        X_test),
+    columns=X_test.columns)
+
+#### Feature Selection ####
+
+# Lasso Based
+
+lsvc = Lasso(alpha=0.6).fit(X_train, y_train["y"])
+model = SelectFromModel(lsvc, prefit=True)
+
+X_train = pd.DataFrame(model.transform(X_train))
+X_test = pd.DataFrame(model.transform(X_test))
+
+# Correlation Based
+
+Corr = X_train.corrwith(y_train["y"], method="pearson")
+
+X_train = X_train.loc[:, (Corr > 0.1) | (Corr < -0.1)]
+X_test = X_test.loc[:, (Corr > 0.1) | (Corr < -0.1)]
+
+#### Outlier correction
+
+pca = PCA(n_components=20)
+pca.fit(X_train)
+dfComp = pd.DataFrame(pca.transform(X_train))
+
+outliers_fraction = 0.001
+nu_estimate = 0.95 * outliers_fraction + 0.04
+auto_detection = OneClassSVM(kernel="rbf", gamma=0.00001, nu=nu_estimate)
+auto_detection.fit(dfComp.iloc[:, [0, 1]])
+evaluation = auto_detection.predict(dfComp.iloc[:, [0, 1]])
+
+X_train = X_train[evaluation != -1]
+y_train = y_train[evaluation != -1]
+
+#### Model ####
+
+# Grid Search
+
+param_test = {'max_depth': [24, 26, 28],
+              'min_child_samples': [5,6,4],
+              'min_child_weight': [0],
+              'subsample': [0.8,0.9],
+              'colsample_bytree': [0.8, 0.7]}
+
+gsearch5 = GridSearchCV(estimator=lgb.LGBMRegressor(boosting_type='gbdt',  
+                                                    objective='rmse',
+                                                    num_iterations = 2000,
+                                                    learning_rate = 0.01, 
+                                                    metric='l1',
+                                                    num_threads = 2,
+                                                    random_state = 42),
+                        param_grid=param_test,
+                        scoring="r2",
+                        n_jobs= 4, 
+                        cv=5)
+
+gsearch5.fit(X_train, y_train["y"])
+
+pd.DataFrame(gsearch5.cv_results_).sort_values("rank_test_score")
+print(gsearch5.best_params_)
+print(gsearch5.best_score_)
+
+# Finetuning
+
+R2 = []
+cv = KFold(n_splits=4, random_state=42)
+
+model = lgb.LGBMRegressor(boosting_type='gbdt',
+                        objective='rmse',
+                        num_iterations =2000,
+                        learning_rate = 0.01,
+                        metric='l1',
+                        random_state=42,
+                        max_depth = 24,
+                        min_child_samples = 5,
+                        min_child_weight = 0,
+                        subsample = 0.8,
+                        colsample_bytree = 0.7,
+                        reg_alpha = 0,
+                        importance_type = "split"
+                        )
+
+for train_ix, test_ix in cv.split(X_train):
+
+    X_cvtrain, X_cvtest = X_train.iloc[train_ix, :], X_train.iloc[test_ix, :]
+    y_cvtrain, y_cvtest = y_train["y"].iloc[train_ix], y_train["y"].iloc[test_ix]
+
+    model.fit(X_cvtrain, y_cvtrain)
+
+    predtrain = model.predict(X_cvtrain)
+    pred = model.predict(X_cvtest)
+
+    print("\nTrain R2:")
+    print(np.round(r2_score(y_cvtrain, predtrain), 2))
+    print("\nTest R2:")
+    print(np.round(r2_score(y_cvtest, pred), 2))
+    print("\n________________________")
+
+    R2.append(np.round(r2_score(y_cvtest, pred), 4))
+
+print("\nAverage R2:", round(np.sum(R2)/4, 2))
+print("Std:", round(np.std(R2), 4))
+
+# ANN
+
+def coeff_determination(y_true, y_pred):
+    from keras import backend as K
+    SS_res = K.sum(K.square(y_true-y_pred))
+    SS_tot = K.sum(K.square(y_true - K.mean(y_true)))
+    return (1 - SS_res/(SS_tot + K.epsilon()) )
+
+model = Sequential()
+model.add(Dense(4, input_dim=X_train.shape[1], activation='relu'))
+model.add(Dense(4, activation='relu'))
+model.add(Dense(1, activation='linear'))
+model.summary()
+
+model.compile(loss='mse', optimizer='adam', metrics=[coeff_determination])
+
+history = model.fit(X_train, y_train["y"], epochs=1000, batch_size=50,  verbose=2, validation_split=0.2)
+
+plt.plot(history.history['coeff_determination'][100:])
+plt.plot(history.history['val_coeff_determination'][100:])
+plt.title('Model R²')
+plt.ylabel('coeff_determination')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+plt.show()
+
+# Predict Test Data
+
+model.fit(X_train, y_train["y"])
+
+preds = model.predict(X_test)
+
+dfResults = pd.DataFrame({"id": list(range(0, 776, 1)), "y": preds})
+
+dfResults.to_csv("Results.csv", sep=',', index=False)
