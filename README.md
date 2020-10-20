@@ -7,7 +7,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/lukaskln/Making-predictions-based-on-highly-corrupted-MRI-data">
-    <img src="https://github.com/lukaskln/Making-predictions-based-on-highly-corrupted-MRI-data/blob/main/Graphics/OutliersPC.png" alt="Logo" width="800">
+    <img src="https://github.com/lukaskln/Making-predictions-based-on-highly-corrupted-MRI-data/blob/main/Graphics/OutliersPC.png" alt="Logo" width="600">
   </a>
 
   <h3 align="center">The Effect of Sparse Coding visualized in Application</h3>
