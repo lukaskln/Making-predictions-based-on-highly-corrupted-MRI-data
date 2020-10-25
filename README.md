@@ -10,7 +10,7 @@
     <img src="https://github.com/lukaskln/Making-predictions-based-on-highly-corrupted-MRI-data/blob/main/Graphics/OutliersSVC.png" alt="Logo" width="600">
   </a>
 
-  <h3 align="center">The Effect of Sparse Coding visualized in Application</h3>
+  <h3 align="center">Making predictions based on corrupted MRI Data</h3>
 
   <p align="center">
     Area of Anomaly Detection and Machine Learning.
